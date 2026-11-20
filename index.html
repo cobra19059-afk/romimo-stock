@@ -101,7 +101,7 @@ section.on{display:block}
 .kv div{word-break:break-all}
 .logrow{display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);align-items:center}
 .logrow:last-child{border-bottom:0}
-.badge{flex:none;width:44px;text-align:center;font-size:12px;font-weight:800;padding:5px 0;border-radius:8px;color:#fff}
+.badge{flex:none;width:56px;text-align:center;font-size:12px;font-weight:800;padding:5px 0;border-radius:8px;color:#fff}
 .b-사용{background:var(--use)}.b-입고{background:var(--in)}.b-파손{background:var(--broken)}.b-실사{background:var(--count)}.b-취소{background:#98a2b3}.b-신규{background:var(--navy)}
 .logrow .nm{flex:1;min-width:0;font-size:14px}
 .logrow .nm span{display:block;font-size:12px;color:var(--sub)}
@@ -158,7 +158,7 @@ body *{visibility:hidden}
 <button data-m="사용" class="on">사용</button>
 <button data-m="입고">입고</button>
 <button data-m="파손">파손</button>
-<button data-m="실사">실사</button>
+<button data-m="실사">재고조사</button>
 </div>
 <div id="workArea"></div>
 <div class="card" id="scanCard">
@@ -429,7 +429,7 @@ try {
 const r = await call('api_transact', [entry], S.user);
 upsertItems(r.items);
 const x = r.results[0];
-toast(`${x.name} ${x.type} ${fmt(x.qty)} → 재고 ${fmt(x.after)}${x.unit}`);
+toast(`${x.name} ${x.type === '실사' ? '재고조사' : x.type} ${fmt(x.qty)} → 재고 ${fmt(x.after)}${x.unit}`);
 S.sel = null; S.gs1Expiry = '';
 renderWork();
 resumeCam();
@@ -562,14 +562,17 @@ openModal(`<button class="x" id="dX">×</button><h3>${esc(it.name)}</h3><div>${t
 <div class="kv">${kv.filter(r => r[1] !== '' && r[1] != null).map(r => `<div>${r[0]}</div><div>${esc(r[1])}</div>`).join('')}</div>
 <div class="grid2"><button class="btn primary" id="dUse">사용/입고 기록</button><button class="btn" id="dEdit">정보 수정</button></div>
 <button class="btn ghost" style="width:100%;margin-top:8px" id="dLabel">이 품목 QR 라벨</button>
+<div class="hint" id="dLast" style="margin-top:12px">최근 재고조사: 확인 중…</div>
 <h4 style="margin:18px 0 6px">최근 기록</h4><div class="list" id="dLogs"><div class="empty">불러오는 중…</div></div>`);
 $('#dX').onclick = closeModal;
 $('#dUse').onclick = () => { closeModal(); selectItem(it); };
 $('#dEdit').onclick = () => itemForm(it);
 $('#dLabel').onclick = () => labelMaker([it.id]);
 try {
-const logs = await call('api_logs', {id: it.id, limit: 30});
-if ($('#dLogs')) $('#dLogs').innerHTML = logs.length ? logs.map(logRow).join('') : '<div class="empty">아직 기록이 없습니다.</div>';
+const logs = await call('api_logs', {id: it.id, limit: 300});
+const lastCount = logs.find(l => l.type === '실사' && !l.cancelled);
+if ($('#dLast')) $('#dLast').innerHTML = lastCount ? `최근 재고조사: <b>${esc(String(lastCount.time).slice(0,16))}</b> · ${esc(lastCount.user)} · 실제 ${fmt(lastCount.qty)}${esc(it.unit)}` : '최근 재고조사: <b>기록 없음</b>';
+if ($('#dLogs')) $('#dLogs').innerHTML = logs.length ? logs.slice(0, 30).map(logRow).join('') : '<div class="empty">아직 기록이 없습니다.</div>';
 } catch(e){ if ($('#dLogs')) $('#dLogs').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
 }
 function itemForm(it, preset){
@@ -580,7 +583,7 @@ openModal(`<button class="x" id="fX">×</button><h3>${isNew ? '새 품목 등록
 <div class="field"><label>장부</label><select id="f_book">${BOOK_LIST.map(b => `<option ${it.book === b ? 'selected' : ''}>${b}</option>`).join('')}</select></div>
 ${f('name', '품목명')}
 <div class="grid2">${f('unit', '단위 (개, 박스, 통…)')}${f('min', '최소재고 (이하면 부족 표시)', 'number')}</div>
-${isNew ? f('stock', '현재 수량', 'number') : `<p class="hint">현재고(${fmt(it.stock)}${esc(it.unit)})는 여기서 바꾸지 않고, 스캔 화면의 <b>실사</b>로 맞춥니다. 그래야 기록이 남습니다.</p>`}
+${isNew ? f('stock', '현재 수량', 'number') : `<p class="hint">현재고(${fmt(it.stock)}${esc(it.unit)})는 여기서 바꾸지 않고, 스캔 화면의 <b>재고조사</b>로 맞춥니다. 그래야 기록이 남습니다.</p>`}
 <div class="grid2">${f('location', '위치')}${f('owner', '담당자')}</div>
 ${f('vendor', '거래처')}
 <div class="grid2">${f('price', '가격')}${f('expiry', '유통기한', 'date')}</div>
@@ -652,7 +655,7 @@ $('#labelBtn').onclick = () => labelMaker();
 function logRow(l){
 const t = String(l.type);
 const cls = t.startsWith('취소') ? '취소' : t === '신규등록' ? '신규' : t;
-const label = t.startsWith('취소') ? '취소' : t === '신규등록' ? '신규' : t;
+const label = t.startsWith('취소') ? '취소' : t === '신규등록' ? '신규' : t === '실사' ? '재고조사' : t;
 const canCancel = !l.cancelled && !t.startsWith('취소') && t !== '신규등록' && l.user === S.user && String(l.time).slice(0,10) === (S.today || '') ;
 const d = Number(l.delta);
 return `<div class="logrow ${l.cancelled ? 'cancelled' : ''}" ${canCancel ? `data-no="${esc(l.no)}" style="cursor:pointer"` : ''}>
