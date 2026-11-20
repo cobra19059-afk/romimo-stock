@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>로미모 재고관리</title>
+<meta name="theme-color" content="#1d3557">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="로미모 재고">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{
+--bg:#f3f5f8; --card:#fff; --ink:#18212f; --sub:#667085; --line:#e4e7ec;
+--navy:#1d3557; --use:#2563eb; --in:#16a34a; --broken:#ea580c; --count:#7c3aed;
+--warn:#d97706; --bad:#dc2626; --r:14px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;font-size:15px}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
+input,select,textarea{font:inherit;color:inherit}
+.app{max-width:640px;margin:0 auto;min-height:100vh;padding-bottom:84px}
+header{position:sticky;top:0;z-index:20;background:var(--navy);color:#fff;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;display:flex;align-items:center;gap:10px}
+header h1{font-size:17px;margin:0;flex:1;letter-spacing:-.2px}
+header h1 small{font-weight:400;opacity:.7;font-size:12px;margin-left:6px}
+.who{background:rgba(255,255,255,.14);padding:6px 11px;border-radius:999px;font-size:13px}
+nav.tabs{position:fixed;bottom:0;left:0;right:0;z-index:30;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
+nav.tabs .in{display:flex;max-width:640px;width:100%}
+nav.tabs button{flex:1;padding:9px 0 10px;font-size:12px;color:var(--sub);display:flex;flex-direction:column;align-items:center;gap:3px}
+nav.tabs button svg{width:23px;height:23px}
+nav.tabs button.on{color:var(--navy);font-weight:700}
+section{display:none;padding:14px}
+section.on{display:block}
+.card{background:var(--card);border-radius:var(--r);padding:14px;box-shadow:0 1px 2px rgba(16,24,40,.06);margin-bottom:12px}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+.seg button{padding:11px 0;border-radius:12px;background:#fff;font-weight:700;color:var(--sub);border:2px solid transparent;box-shadow:0 1px 2px rgba(16,24,40,.06)}
+.seg button.on[data-m="사용"]{background:var(--use);color:#fff}
+.seg button.on[data-m="입고"]{background:var(--in);color:#fff}
+.seg button.on[data-m="파손"]{background:var(--broken);color:#fff}
+.seg button.on[data-m="실사"]{background:var(--count);color:#fff}
+#reader{width:100%;border-radius:12px;overflow:hidden;background:#0b1220;min-height:0}
+#reader video{border-radius:12px}
+.scanbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.btn{padding:12px 14px;border-radius:12px;font-weight:700;background:#eef2f7;color:var(--navy);display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.primary{background:var(--navy);color:#fff}
+.btn.big{width:100%;padding:16px;font-size:17px;border-radius:14px}
+.btn.ghost{background:transparent;border:1px solid var(--line)}
+.btn.danger{background:#fee2e2;color:var(--bad)}
+.btn:disabled{opacity:.5}
+.search{position:relative;margin-top:10px}
+.search input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;outline:none}
+.search input:focus{border-color:var(--navy)}
+.hint{color:var(--sub);font-size:12.5px;margin-top:8px;line-height:1.5}
+.list{background:#fff;border-radius:var(--r);overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.06)}
+.row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);width:100%;text-align:left}
+.row:last-child{border-bottom:0}
+.row .nm{flex:1;min-width:0}
+.row .nm b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .nm span{font-size:12px;color:var(--sub)}
+.row .qty{font-weight:800;font-size:17px;text-align:right;white-space:nowrap}
+.row .qty small{font-weight:500;font-size:12px;color:var(--sub);margin-left:2px}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;margin-left:4px;vertical-align:1px}
+.tag.low{background:#fee2e2;color:var(--bad)}
+.tag.exp{background:#ffedd5;color:#c2410c}
+.tag.expd{background:var(--bad);color:#fff}
+.tag.book{background:#eef2f7;color:var(--navy)}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;scrollbar-width:none}
+.chips button{flex:none;padding:7px 12px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:13.5px;color:var(--sub)}
+.chips button.on{background:var(--navy);border-color:var(--navy);color:#fff;font-weight:700}
+.work{border:2px solid var(--navy)}
+.work .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.work h2{margin:0;font-size:19px}
+.work .now{font-size:13px;color:var(--sub);margin-top:3px}
+.stepper{display:flex;align-items:center;justify-content:center;gap:14px;margin:16px 0 6px}
+.stepper button{width:54px;height:54px;border-radius:50%;background:#eef2f7;font-size:26px;font-weight:700;color:var(--navy)}
+.stepper input{width:110px;text-align:center;font-size:30px;font-weight:800;border:0;border-bottom:2px solid var(--line);padding:4px 0;outline:none;background:transparent}
+.quick{display:flex;gap:6px;justify-content:center;margin-bottom:12px}
+.quick button{padding:6px 12px;border-radius:999px;background:#f2f4f7;font-size:13px}
+.field{margin-top:10px}
+.field label{display:block;font-size:12.5px;color:var(--sub);margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;outline:none}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.preview{font-size:14px;text-align:center;color:var(--sub);margin:4px 0 12px}
+.preview b{color:var(--ink)}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);background:#111827;color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;opacity:0;transition:.25s;z-index:100;max-width:92vw;text-align:center;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.toast.err{background:var(--bad)}
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:60;display:none;align-items:flex-end;justify-content:center}
+.modal.on{display:flex}
+.sheet{background:#fff;width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+.sheet h3{margin:0 0 4px;font-size:18px}
+.sheet .x{float:right;font-size:22px;color:var(--sub);padding:0 4px}
+.kv{display:grid;grid-template-columns:88px 1fr;gap:6px 10px;font-size:14px;margin:12px 0}
+.kv div:nth-child(odd){color:var(--sub)}
+.kv div{word-break:break-all}
+.logrow{display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);align-items:center}
+.logrow:last-child{border-bottom:0}
+.badge{flex:none;width:44px;text-align:center;font-size:12px;font-weight:800;padding:5px 0;border-radius:8px;color:#fff}
+.b-사용{background:var(--use)}.b-입고{background:var(--in)}.b-파손{background:var(--broken)}.b-실사{background:var(--count)}.b-취소{background:#98a2b3}.b-신규{background:var(--navy)}
+.logrow .nm{flex:1;min-width:0;font-size:14px}
+.logrow .nm span{display:block;font-size:12px;color:var(--sub)}
+.logrow .v{text-align:right;font-weight:700;white-space:nowrap}
+.logrow .v span{display:block;font-weight:400;font-size:12px;color:var(--sub)}
+.logrow.cancelled{opacity:.45}
+.logrow.cancelled .nm b{text-decoration:line-through}
+.mini{font-size:12px;padding:5px 9px;border-radius:8px;background:#f2f4f7;color:var(--sub);margin-top:4px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.stat{background:#fff;border-radius:12px;padding:11px;text-align:center;box-shadow:0 1px 2px rgba(16,24,40,.06)}
+.stat b{display:block;font-size:22px}
+.stat span{font-size:12px;color:var(--sub)}
+.stat.red b{color:var(--bad)}.stat.org b{color:var(--warn)}
+table.rep{width:100%;border-collapse:collapse;font-size:13px;background:#fff}
+table.rep th,table.rep td{padding:8px 5px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+table.rep th{background:#f8fafc;color:var(--sub);font-weight:600;position:sticky;top:0}
+table.rep td:first-child,table.rep th:first-child{text-align:left;white-space:normal}
+.repwrap{overflow-x:auto;border-radius:var(--r);box-shadow:0 1px 2px rgba(16,24,40,.06)}
+.empty{padding:28px;text-align:center;color:var(--sub)}
+.codechip{display:inline-flex;align-items:center;gap:4px;background:#eef2f7;border-radius:8px;padding:4px 8px;font-size:12.5px;margin:3px 4px 0 0;font-family:ui-monospace,monospace}
+.codechip button{color:var(--bad);font-weight:700;padding:0 2px}
+.names{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.names button{padding:10px 16px;border-radius:12px;background:#eef2f7;font-weight:600}
+.loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:90;flex-direction:column;gap:12px;color:var(--sub)}
+.spin{width:34px;height:34px;border:3px solid var(--line);border-top-color:var(--navy);border-radius:50%;animation:sp 0.8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+#labels{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.label{border:1px dashed #cbd5e1;border-radius:8px;padding:8px;text-align:center;break-inside:avoid;page-break-inside:avoid}
+.label .q{display:flex;justify-content:center}
+.label .q img,.label .q canvas{width:88px!important;height:88px!important}
+.label b{display:block;font-size:12px;margin-top:4px;line-height:1.25}
+.label span{font-size:10px;color:#667085}
+.checkgrid{max-height:40vh;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-top:8px}
+.checkgrid label{display:flex;gap:8px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line);font-size:14px}
+@media print{
+body *{visibility:hidden}
+#printArea,#printArea *{visibility:visible}
+#printArea{position:absolute;left:0;top:0;width:100%}
+#labels{grid-template-columns:repeat(4,1fr)}
+.label{border:1px dashed #999}
+}
+</style>
+</head>
+<body>
+<div class="loading" id="loading"><div class="spin"></div><div id="loadingMsg">불러오는 중…</div></div>
+<div class="app">
+<header>
+<h1>로미모 재고관리<small id="countInfo"></small></h1>
+<button class="who" id="whoBtn">이름 선택</button>
+</header>
+<!-- 스캔 -->
+<section id="v-scan" class="on">
+<div class="seg" id="modeSeg">
+<button data-m="사용" class="on">사용</button>
+<button data-m="입고">입고</button>
+<button data-m="파손">파손</button>
+<button data-m="실사">실사</button>
+</div>
+<div id="workArea"></div>
+<div class="card" id="scanCard">
+<div id="reader"></div>
+<div id="reader-file" style="display:none"></div>
+<div class="scanbtns">
+<button class="btn primary" id="camBtn">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/></svg>
+<span>카메라 켜기</span></button>
+<label class="btn" for="photoInput">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+사진으로 인식</label>
+<input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none">
+</div>
+<div class="search">
+<input id="q" placeholder="품목명 검색 · 바코드 입력" autocomplete="off" enterkeyhint="search">
+</div>
+<div class="hint" id="scanHint">바코드·QR을 찍거나, 바코드가 없는 물품은 이름으로 검색하세요. 바코드 스캐너(총)를 연결했다면 이 칸을 누른 뒤 찍으면 됩니다.</div>
+</div>
+<div id="searchResults"></div>
+</section>
+<!-- 재고 -->
+<section id="v-stock">
+<div class="stats" id="stockStats"></div>
+<div class="chips" id="bookChips"></div>
+<div class="search" style="margin:0 0 10px"><input id="q2" placeholder="품목명 · 위치 · 거래처 검색" autocomplete="off"></div>
+<div class="list" id="stockList"></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+<button class="btn" id="addItemBtn">+ 품목 추가</button>
+<button class="btn" id="labelBtn">QR 라벨 만들기</button>
+</div>
+</section>
+<!-- 기록 -->
+<section id="v-log">
+<div class="chips" id="logChips"></div>
+<div class="list" id="logList"></div>
+<div class="hint">본인이 오늘 남긴 기록은 눌러서 취소할 수 있습니다. 취소하면 재고가 원래대로 돌아가고, 시트에는 취소 기록이 남습니다.</div>
+</section>
+<!-- 보고 -->
+<section id="v-report">
+<div class="card" style="display:flex;gap:8px;align-items:center">
+<input type="month" id="ym" style="flex:1;padding:10px;border:1px solid var(--line);border-radius:10px">
+<button class="btn primary" id="repLoad">조회</button>
+</div>
+<div class="stats" id="repStats"></div>
+<div id="alerts"></div>
+<div class="chips" id="repChips"></div>
+<div class="repwrap" id="repTable"></div>
+<button class="btn big" style="margin-top:12px" id="repSheet">구글시트에 보고서 시트 만들기</button>
+<div class="hint">전월재고 = 월말재고 − 입고 + 사용 + 파손 − 조정. 기존 엑셀의 "사용량 = 전월재고 + 구매수량 − 재고수량"과 같은 방식입니다.</div>
+</section>
+</div>
+<nav class="tabs"><div class="in">
+<button data-v="scan" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10 8v8M13 8v8M17 8v8"/></svg>스캔</button>
+<button data-v="stock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"/></svg>재고</button>
+<button data-v="log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>기록</button>
+<button data-v="report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"/></svg>보고</button>
+</div></nav>
+<div class="toast" id="toast"></div>
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<script>
+/* ============ 상태 ============ */
+const S = {
+items: [], logs: [], settings: {expiryDays: 90, staff: []}, today: '',
+mode: '사용', sel: null, pendingCode: null, gs1Expiry: '',
+book: '전체', logBook: '전체', repBook: '전체', report: null,
+user: lsGet('inv_user') || '', pin: lsGet('inv_pin') || '',
+scanner: null, camOn: false, lastScan: {t: '', at: 0}
+};
+const BOOK_LIST = ['수술실', 'C-Tip', '식모기', '소모품'];
+const nameCat = n => { const c = String(n||'').trim().charAt(0); return /\d/.test(c) ? 0 : /[가-힣ㄱ-ㅎ]/.test(c) ? 1 : /[A-Za-z]/.test(c) ? 2 : 3; };
+const cmpName = (a, b) => (nameCat(a.name) - nameCat(b.name)) || String(a.name).trim().localeCompare(String(b.name).trim(), 'ko', {numeric: true, sensitivity: 'base'});
+const bookIdx = b => { const i = BOOK_LIST.indexOf(b); return i < 0 ? 99 : i; };
+const cmpItem = (a, b) => (bookIdx(a.book) - bookIdx(b.book)) || cmpName(a, b);
+const MODE_COLOR = {'사용': 'var(--use)', '입고': 'var(--in)', '파손': 'var(--broken)', '실사': 'var(--count)'};
+function lsGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+function lsSet(k, v){ try { localStorage.setItem(k, v); } catch(e){} }
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => { const x = Number(n); return Number.isInteger(x) ? String(x) : String(Math.round(x*100)/100); };
+/* ============ 서버 호출 ============ */
+const API_URL = 'https://script.google.com/macros/s/AKfycbzDUvUiVgF-7v6iI3wlYSPt-TUl6qPaikXe0KteIISrgNBZGBwbJwQqsUeRuOJeDwUDIQ/exec';
+async function call(fn, ...args){
+let r;
+try {
+const res = await fetch(API_URL, {method: 'POST', body: JSON.stringify({fn: fn.replace(/^api_/, ''), args: [S.pin, ...args]}), redirect: 'follow'});
+r = await res.json();
+} catch(e){ throw new Error('서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요.'); }
+if (r && r.ok) return r.data;
+if (r && r.error === 'PIN'){ await askPin(true); return call(fn, ...args); }
+throw new Error(r ? r.error : '서버 응답이 없습니다.');
+}
+function toast(msg, err){
+const t = $('#toast'); t.textContent = msg; t.className = 'toast on' + (err ? ' err' : '');
+clearTimeout(toast._t); toast._t = setTimeout(() => t.className = 'toast', err ? 3800 : 2200);
+}
+/* ============ 모달 ============ */
+function openModal(html){ $('#sheet').innerHTML = html; $('#modal').classList.add('on'); }
+function closeModal(){ $('#modal').classList.remove('on'); $('#sheet').innerHTML = ''; }
+$('#modal').addEventListener('click', e => { if (e.target.id === 'modal' && !$('#modal').dataset.lock) closeModal(); });
+function confirmBox(msg, okText){
+return new Promise(res => {
+openModal(`<h3>확인</h3><p style="line-height:1.6">${msg}</p>
+<div class="grid2" style="margin-top:14px"><button class="btn ghost" id="cNo">아니오</button><button class="btn primary" id="cYes">${esc(okText||'예')}</button></div>`);
+$('#cNo').onclick = () => { closeModal(); res(false); };
+$('#cYes').onclick = () => { closeModal(); res(true); };
+});
+}
+function askPin(wrong){
+return new Promise(res => {
+$('#modal').dataset.lock = '1';
+$('#loading').style.display = 'none';
+openModal(`<h3>PIN 입력</h3><p class="hint">${wrong && S.pin ? 'PIN이 맞지 않습니다. 다시 입력해 주세요.' : '병원에서 정한 PIN 번호를 입력해 주세요.'}</p>
+<div class="field"><input id="pinIn" type="password" inputmode="numeric" autocomplete="off"></div>
+<button class="btn big primary" style="margin-top:12px" id="pinOk">확인</button>`);
+setTimeout(() => $('#pinIn').focus(), 50);
+const go = () => { S.pin = $('#pinIn').value.trim(); lsSet('inv_pin', S.pin); delete $('#modal').dataset.lock; closeModal(); res(); };
+$('#pinOk').onclick = go;
+$('#pinIn').onkeydown = e => { if (e.key === 'Enter') go(); };
+});
+}
+function askName(){
+return new Promise(res => {
+const staff = S.settings.staff || [];
+openModal(`<h3>누가 사용하시나요?</h3><p class="hint">기록에 담당자로 남습니다. 이 휴대폰에 저장되어 다음부터는 묻지 않습니다.</p>
+<div class="names">${staff.map(n => `<button data-n="${esc(n)}">${esc(n)}</button>`).join('')}</div>
+<div class="field"><label>목록에 없으면 직접 입력</label><input id="nameIn" value="${esc(S.user)}"></div>
+<button class="btn big primary" style="margin-top:12px" id="nameOk">저장</button>`);
+const set = n => { n = String(n||'').trim(); if (!n) return toast('이름을 입력해 주세요.', 1); S.user = n; lsSet('inv_user', n); $('#whoBtn').textContent = n; closeModal(); res(); };
+document.querySelectorAll('.names button').forEach(b => b.onclick = () => set(b.dataset.n));
+$('#nameOk').onclick = () => set($('#nameIn').value);
+});
+}
+$('#whoBtn').onclick = () => askName();
+/* ============ 공통 계산 ============ */
+function daysLeft(exp){
+if (!exp) return null;
+const m = String(exp).match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return null;
+const d = new Date(+m[1], +m[2]-1, +m[3]); const t = new Date(S.today || Date.now());
+t.setHours(0,0,0,0);
+return Math.round((d - t) / 86400000);
+}
+function isLow(it){ return it.min !== '' && it.min != null && Number(it.stock) <= Number(it.min); }
+function expState(it){ const d = daysLeft(it.expiry); if (d == null) return ''; if (d < 0) return 'expd'; if (d <= S.settings.expiryDays) return 'exp'; return ''; }
+function tags(it, withBook){
+let h = '';
+if (withBook) h += `<span class="tag book">${esc(it.book)}</span>`;
+if (isLow(it)) h += `<span class="tag low">부족</span>`;
+const e = expState(it);
+if (e === 'expd') h += `<span class="tag expd">기한지남</span>`;
+else if (e === 'exp') h += `<span class="tag exp">기한 ${daysLeft(it.expiry)}일</span>`;
+return h;
+}
+const normSearch = s => String(s||'').toLowerCase().replace(/\s+/g, '');
+function findItems(q){
+q = normSearch(q); if (!q) return [];
+return S.items.filter(it => normSearch(it.name).includes(q) || normSearch(it.location).includes(q) || normSearch(it.vendor).includes(q) || it.id.toLowerCase() === q || (it.barcodes||[]).some(c => c.includes(q))).sort(cmpItem);
+}
+function upsertItems(list){
+list.forEach(n => { const i = S.items.findIndex(x => x.id === n.id); if (i >= 0) S.items[i] = n; else S.items.push(n); });
+if (S.sel) S.sel = S.items.find(x => x.id === S.sel.id) || null;
+renderCount();
+}
+function renderCount(){
+const low = S.items.filter(isLow).length;
+$('#countInfo').textContent = `품목 ${S.items.length}` + (low ? ` · 부족 ${low}` : '');
+}
+/* ============ 바코드 해석 (GS1 의약품 DataMatrix 포함) ============ */
+function normCode(c){ c = String(c||'').trim(); if (/^0\d{13}$/.test(c)) c = c.slice(1); return c; }
+function yymmdd(v){
+if (!/^\d{6}$/.test(v)) return '';
+let y = 2000 + +v.slice(0,2), m = +v.slice(2,4), d = +v.slice(4,6);
+if (d === 0) d = new Date(y, m, 0).getDate();
+return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+function parseCode(raw){
+let t = String(raw||'').trim().replace(/^\][A-Za-z]\d/, '');
+const GS = '\u001d';
+const out = {raw: t, code: '', itemId: '', expiry: '', lot: ''};
+const m = t.match(/^ROMIMO:(.+)$/i);
+if (m){ out.itemId = m[1].trim(); return out; }
+const ai = {};
+if (/^\(01\)\d{14}/.test(t)){
+t.replace(/\((\d{2,4})\)([^(]*)/g, (_, a, v) => { ai[a] = v.trim(); });
+} else if (/^01\d{14}./.test(t)){
+let i = 0;
+while (i < t.length){
+if (t[i] === GS){ i++; continue; }
+const a = t.substr(i, 2);
+if (a === '01'){ ai['01'] = t.substr(i+2, 14); i += 16; }
+else if (['11','15','17'].includes(a)){ ai[a] = t.substr(i+2, 6); i += 8; }
+else if (['10','21'].includes(a)){ let j = t.indexOf(GS, i+2); if (j < 0) j = t.length; ai[a] = t.substring(i+2, j); i = j; }
+else break;
+}
+}
+if (ai['01']){ out.code = normCode(ai['01']); out.expiry = yymmdd(ai['17']||''); out.lot = ai['10']||''; return out; }
+out.code = normCode(t);
+return out;
+}
+function handleCode(raw, src){
+const p = parseCode(raw);
+if (navigator.vibrate) try { navigator.vibrate(60); } catch(e){}
+let it = null;
+if (p.itemId) it = S.items.find(x => x.id.toUpperCase() === p.itemId.toUpperCase());
+else if (p.code) it = S.items.find(x => (x.barcodes||[]).some(c => normCode(c) === p.code));
+if (it){ S.gs1Expiry = p.expiry; selectItem(it); return; }
+if (p.itemId){ toast('라벨의 품목(' + p.itemId + ')을 찾을 수 없습니다.', 1); return; }
+unknownCode(p);
+}
+/* ============ 스캔 화면 ============ */
+document.querySelectorAll('#modeSeg button').forEach(b => b.onclick = () => {
+S.mode = b.dataset.m;
+document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('on', x === b));
+renderWork();
+});
+function selectItem(it){
+S.sel = it; S.pendingCode = null;
+pauseCam();
+$('#q').value = ''; $('#searchResults').innerHTML = '';
+goView('scan');
+renderWork();
+window.scrollTo({top: 0, behavior: 'smooth'});
+}
+function renderWork(){
+const w = $('#workArea');
+if (S.pendingCode){ return; }
+const it = S.sel;
+if (!it){ w.innerHTML = ''; return; }
+const m = S.mode, col = MODE_COLOR[m];
+const isCount = m === '실사';
+const startQty = isCount ? fmt(it.stock) : 1;
+w.innerHTML = `<div class="card work" style="border-color:${col}">
+<div class="top"><div><h2>${esc(it.name)}</h2>
+<div class="now">${esc(it.book)} · ${esc(it.location||'')} · 현재 <b style="color:var(--ink)">${fmt(it.stock)} ${esc(it.unit)}</b>${tags(it)}</div></div>
+<button class="x" style="font-size:22px;color:var(--sub)" id="wClose">×</button></div>
+<div class="stepper"><button id="wMinus">−</button><input id="wQty" type="number" inputmode="decimal" min="0" step="any" value="${startQty}"><button id="wPlus">+</button></div>
+<div class="quick">${isCount ? '' : [1,2,5,10].map(n => `<button data-q="${n}">${n}</button>`).join('')}</div>
+<div class="preview" id="wPrev"></div>
+${m === '입고' ? `<div class="field"><label>유통기한 (있으면)</label><input type="date" id="wExp" value="${esc(S.gs1Expiry||'')}"></div>` : ''}
+<div class="field"><label>비고 (선택)</label><input id="wNote" placeholder="${m === '사용' ? '예: 환자명, 수술방' : m === '파손' ? '예: 떨어뜨림' : ''}"></div>
+<button class="btn big" style="background:${col};color:#fff;margin-top:14px" id="wSave"></button>
+</div>`;
+const q = $('#wQty');
+const upd = () => {
+const v = Number(q.value);
+const after = isCount ? v : (m === '입고' ? it.stock + v : it.stock - v);
+const ok = !(isNaN(v) || v < 0 || (!isCount && v === 0));
+$('#wPrev').innerHTML = ok ? (isCount ? `장부 ${fmt(it.stock)} → 실제 <b>${fmt(v)}</b> ${esc(it.unit)} (차이 ${fmt(v - it.stock) > 0 ? '+' : ''}${fmt(v - it.stock)})` :
+`${fmt(it.stock)} → <b>${fmt(after)}</b> ${esc(it.unit)}` + (after < 0 ? ` <span style="color:var(--bad)">· 재고보다 많습니다</span>` : '')) : '수량을 확인해 주세요';
+$('#wSave').textContent = isCount ? `실제 수량 ${ok ? fmt(v) : ''}${esc(it.unit)}로 저장` : `${m} ${ok ? fmt(v) : ''}${esc(it.unit)} 기록`;
+$('#wSave').disabled = !ok;
+};
+q.oninput = upd;
+$('#wMinus').onclick = () => { q.value = Math.max(0, (Number(q.value)||0) - 1); upd(); };
+$('#wPlus').onclick = () => { q.value = (Number(q.value)||0) + 1; upd(); };
+w.querySelectorAll('.quick button').forEach(b => b.onclick = () => { q.value = b.dataset.q; upd(); });
+$('#wClose').onclick = () => { S.sel = null; S.gs1Expiry = ''; renderWork(); resumeCam(); };
+$('#wSave').onclick = saveWork;
+upd();
+}
+async function saveWork(){
+if (!S.user) await askName();
+const it = S.sel; if (!it) return;
+const btn = $('#wSave'); btn.disabled = true; btn.textContent = '저장 중…';
+const entry = {id: it.id, type: S.mode, qty: Number($('#wQty').value), note: ($('#wNote')||{}).value || ''};
+if (S.mode === '입고' && $('#wExp') && $('#wExp').value) entry.expiry = $('#wExp').value;
+try {
+const r = await call('api_transact', [entry], S.user);
+upsertItems(r.items);
+const x = r.results[0];
+toast(`${x.name} ${x.type} ${fmt(x.qty)} → 재고 ${fmt(x.after)}${x.unit}`);
+S.sel = null; S.gs1Expiry = '';
+renderWork();
+resumeCam();
+refreshLogs();
+} catch(e){
+toast(e.message, 1); btn.disabled = false; renderWork();
+}
+}
+function unknownCode(p){
+S.pendingCode = p; S.sel = null;
+pauseCam();
+goView('scan');
+$('#workArea').innerHTML = `<div class="card work" style="border-color:var(--warn)">
+<div class="top"><div><h2>처음 보는 바코드</h2><div class="now" style="font-family:ui-monospace,monospace">${esc(p.code || p.raw)}</div></div>
+<button class="x" style="font-size:22px;color:var(--sub)" id="uClose">×</button></div>
+<p class="hint">어떤 물품인지 한 번만 알려주시면 다음부터는 찍자마자 바로 인식합니다.</p>
+<div class="search"><input id="uq" placeholder="기존 품목 이름으로 찾기" autocomplete="off"></div>
+<div id="uRes" style="margin-top:8px"></div>
+<button class="btn" style="width:100%;margin-top:10px" id="uNew">목록에 없음 → 새 품목으로 등록</button>
+</div>`;
+const render = () => {
+const r = findItems($('#uq').value).slice(0, 12);
+$('#uRes').innerHTML = r.length ? `<div class="list">${r.map(it => `<button class="row" data-id="${it.id}"><div class="nm"><b>${esc(it.name)}</b><span>${esc(it.book)} · ${esc(it.location||'')}${it.barcodes && it.barcodes.length ? ' · 바코드 ' + it.barcodes.length + '개 연결됨' : ''}</span></div><span class="mini">연결</span></button>`).join('')}</div>` : '';
+$('#uRes').querySelectorAll('.row').forEach(b => b.onclick = async () => {
+const it = S.items.find(x => x.id === b.dataset.id);
+if (!await confirmBox(`<b>${esc(it.name)}</b>에 이 바코드를 연결할까요?`, '연결')) return unknownCode(p);
+try {
+const r2 = await call('api_linkBarcode', it.id, p.code);
+upsertItems([r2.item]); toast('연결했습니다. 다음부터 바로 인식됩니다.');
+S.pendingCode = null; S.gs1Expiry = p.expiry; selectItem(S.items.find(x => x.id === it.id));
+} catch(e){ toast(e.message, 1); unknownCode(p); }
+});
+};
+$('#uq').oninput = render;
+$('#uClose').onclick = () => { S.pendingCode = null; $('#workArea').innerHTML = ''; resumeCam(); };
+$('#uNew').onclick = () => itemForm(null, {barcodes: [p.code], expiry: p.expiry});
+}
+/* 검색 */
+$('#q').addEventListener('input', () => {
+const v = $('#q').value;
+const r = findItems(v).slice(0, 30);
+$('#searchResults').innerHTML = v.trim() ? (r.length ? `<div class="list">${r.map(it => stockRow(it, true)).join('')}</div>` : `<div class="empty">검색 결과가 없습니다. Enter를 누르면 바코드로 처리합니다.</div>`) : '';
+$('#searchResults').querySelectorAll('.row').forEach(b => b.onclick = () => selectItem(S.items.find(x => x.id === b.dataset.id)));
+});
+$('#q').addEventListener('keydown', e => {
+if (e.key !== 'Enter') return;
+e.preventDefault();
+const v = $('#q').value.trim(); if (!v) return;
+const p = parseCode(v);
+const hit = p.itemId || S.items.some(x => (x.barcodes||[]).some(c => normCode(c) === p.code));
+const r = findItems(v);
+if (!hit && r.length === 1) return selectItem(r[0]);
+if (!hit && r.length > 1) return;
+$('#q').value = ''; $('#searchResults').innerHTML = '';
+handleCode(v, 'keyboard');
+});
+/* ============ 카메라 ============ */
+function scannerFormats(){
+if (typeof Html5QrcodeSupportedFormats === 'undefined') return undefined;
+const F = Html5QrcodeSupportedFormats;
+return [F.QR_CODE, F.DATA_MATRIX, F.EAN_13, F.EAN_8, F.CODE_128, F.CODE_39, F.UPC_A, F.UPC_E, F.ITF];
+}
+function libReady(){
+if (typeof Html5Qrcode === 'undefined'){ toast('스캔 기능을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.', 1); return false; }
+return true;
+}
+async function startCam(){
+if (!libReady()) return;
+try {
+if (!S.scanner) S.scanner = new Html5Qrcode('reader', {formatsToSupport: scannerFormats(), experimentalFeatures: {useBarCodeDetectorIfSupported: true}, verbose: false});
+await S.scanner.start({facingMode: 'environment'}, {fps: 12, qrbox: (w, h) => ({width: Math.floor(w*0.8), height: Math.floor(Math.min(h, w)*0.55)})}, onScan, () => {});
+S.camOn = true; $('#camBtn span').textContent = '카메라 끄기';
+$('#scanHint').textContent = '바코드를 네모 칸 안에 맞춰 주세요. 인식되면 위에 입력 카드가 나타납니다.';
+} catch(e){
+S.camOn = false;
+$('#scanHint').innerHTML = '<b style="color:var(--bad)">이 화면에서는 실시간 카메라를 쓸 수 없습니다.</b> 옆의 <b>사진으로 인식</b> 버튼을 눌러 바코드를 찍어 주세요. (카메라 권한을 거부했다면 브라우저 설정에서 허용해 주세요.)';
+}
+}
+async function stopCam(){
+if (S.scanner && S.camOn){ try { await S.scanner.stop(); } catch(e){} }
+S.camOn = false; $('#camBtn span').textContent = '카메라 켜기';
+}
+function pauseCam(){ if (S.scanner && S.camOn){ try { S.scanner.pause(true); } catch(e){} } }
+function resumeCam(){ if (S.scanner && S.camOn){ try { S.scanner.resume(); } catch(e){} } }
+function onScan(text){
+const now = Date.now();
+if (text === S.lastScan.t && now - S.lastScan.at < 2500) return;
+S.lastScan = {t: text, at: now};
+handleCode(text, 'camera');
+}
+$('#camBtn').onclick = () => S.camOn ? stopCam() : startCam();
+$('#photoInput').onchange = async e => {
+const f = e.target.files[0]; e.target.value = '';
+if (!f || !libReady()) return;
+toast('인식 중…');
+try {
+const fs = new Html5Qrcode('reader-file', {formatsToSupport: scannerFormats(), experimentalFeatures: {useBarCodeDetectorIfSupported: true}, verbose: false});
+const text = await fs.scanFile(f, false);
+handleCode(text, 'photo');
+} catch(err){
+toast('바코드를 찾지 못했습니다. 바코드가 크게, 흔들리지 않게 나오도록 다시 찍어 주세요.', 1);
+}
+};
+/* ============ 재고 화면 ============ */
+function stockRow(it, withBook){
+return `<button class="row" data-id="${it.id}"><div class="nm"><b>${esc(it.name)}${tags(it, withBook)}</b><span>${esc(it.location||'')}${it.vendor ? ' · ' + esc(String(it.vendor).split(' ')[0]) : ''}${it.min !== '' && it.min != null ? ' · 최소 ' + fmt(it.min) : ''}</span></div>
+<div class="qty" style="${Number(it.stock) < 0 ? 'color:var(--bad)' : ''}">${fmt(it.stock)}<small>${esc(it.unit)}</small></div></button>`;
+}
+function renderStock(){
+const chips = ['전체', ...BOOK_LIST, '부족', '유통기한'];
+$('#bookChips').innerHTML = chips.map(c => `<button class="${S.book === c ? 'on' : ''}" data-b="${c}">${c}${c === '부족' ? ' ' + S.items.filter(isLow).length : c === '유통기한' ? ' ' + S.items.filter(i => expState(i)).length : ''}</button>`).join('');
+$('#bookChips').querySelectorAll('button').forEach(b => b.onclick = () => { S.book = b.dataset.b; renderStock(); });
+const low = S.items.filter(isLow).length, exp = S.items.filter(i => expState(i)).length;
+$('#stockStats').innerHTML = `<div class="stat"><b>${S.items.length}</b><span>전체 품목</span></div><div class="stat red"><b>${low}</b><span>최소재고 이하</span></div><div class="stat org"><b>${exp}</b><span>유통기한 ${S.settings.expiryDays}일 이내</span></div>`;
+let list = S.items.slice();
+if (BOOK_LIST.includes(S.book)) list = list.filter(i => i.book === S.book);
+if (S.book === '부족') list = list.filter(isLow);
+if (S.book === '유통기한') list = list.filter(i => expState(i)).sort((a,b) => daysLeft(a.expiry) - daysLeft(b.expiry));
+if (S.book !== '유통기한') list.sort(cmpItem);
+  const q = normSearch($('#q2').value);
+if (q) list = list.filter(it => normSearch(it.name + it.location + it.vendor + it.memo).includes(q));
+$('#stockList').innerHTML = list.length ? list.map(it => stockRow(it, S.book === '전체' || S.book === '부족' || S.book === '유통기한')).join('') : '<div class="empty">해당하는 품목이 없습니다.</div>';
+$('#stockList').querySelectorAll('.row').forEach(b => b.onclick = () => itemDetail(b.dataset.id));
+}
+$('#q2').addEventListener('input', renderStock);
+async function itemDetail(id){
+const it = S.items.find(x => x.id === id); if (!it) return;
+const kv = [['ID', it.id], ['장부', it.book], ['현재고', fmt(it.stock) + ' ' + it.unit], ['최소재고', it.min === '' ? '미설정' : fmt(it.min)], ['위치', it.location], ['거래처', it.vendor], ['가격', it.price], ['구매주기', it.cycle], ['유통기한', it.expiry ? it.expiry + (daysLeft(it.expiry) != null ? ` (${daysLeft(it.expiry)}일 남음)` : '') : ''], ['담당자', it.owner], ['월평균 사용', it.avg !== '' ? it.avg + ' (기존 엑셀 기준)' : ''], ['바코드', (it.barcodes||[]).join(', ') || '연결 안 됨'], ['메모', it.memo]];
+openModal(`<button class="x" id="dX">×</button><h3>${esc(it.name)}</h3><div>${tags(it, true)}</div>
+<div class="kv">${kv.filter(r => r[1] !== '' && r[1] != null).map(r => `<div>${r[0]}</div><div>${esc(r[1])}</div>`).join('')}</div>
+<div class="grid2"><button class="btn primary" id="dUse">사용/입고 기록</button><button class="btn" id="dEdit">정보 수정</button></div>
+<button class="btn ghost" style="width:100%;margin-top:8px" id="dLabel">이 품목 QR 라벨</button>
+<h4 style="margin:18px 0 6px">최근 기록</h4><div class="list" id="dLogs"><div class="empty">불러오는 중…</div></div>`);
+$('#dX').onclick = closeModal;
+$('#dUse').onclick = () => { closeModal(); selectItem(it); };
+$('#dEdit').onclick = () => itemForm(it);
+$('#dLabel').onclick = () => labelMaker([it.id]);
+try {
+const logs = await call('api_logs', {id: it.id, limit: 30});
+if ($('#dLogs')) $('#dLogs').innerHTML = logs.length ? logs.map(logRow).join('') : '<div class="empty">아직 기록이 없습니다.</div>';
+} catch(e){ if ($('#dLogs')) $('#dLogs').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+function itemForm(it, preset){
+const isNew = !it;
+it = it ? JSON.parse(JSON.stringify(it)) : Object.assign({book: S.book && BOOK_LIST.includes(S.book) ? S.book : '소모품', name: '', unit: '개', stock: 0, min: '', location: '', vendor: '', price: '', cycle: '', expiry: '', owner: '', memo: '', barcodes: []}, preset || {});
+const f = (k, label, type) => `<div class="field"><label>${label}</label><input id="f_${k}" type="${type||'text'}" value="${esc(it[k])}"></div>`;
+openModal(`<button class="x" id="fX">×</button><h3>${isNew ? '새 품목 등록' : '품목 정보 수정'}</h3>
+<div class="field"><label>장부</label><select id="f_book">${BOOK_LIST.map(b => `<option ${it.book === b ? 'selected' : ''}>${b}</option>`).join('')}</select></div>
+${f('name', '품목명')}
+<div class="grid2">${f('unit', '단위 (개, 박스, 통…)')}${f('min', '최소재고 (이하면 부족 표시)', 'number')}</div>
+${isNew ? f('stock', '현재 수량', 'number') : `<p class="hint">현재고(${fmt(it.stock)}${esc(it.unit)})는 여기서 바꾸지 않고, 스캔 화면의 <b>실사</b>로 맞춥니다. 그래야 기록이 남습니다.</p>`}
+<div class="grid2">${f('location', '위치')}${f('owner', '담당자')}</div>
+${f('vendor', '거래처')}
+<div class="grid2">${f('price', '가격')}${f('expiry', '유통기한', 'date')}</div>
+${f('cycle', '구매주기')}
+<div class="field"><label>연결된 바코드</label><div id="f_codes"></div>
+<div style="display:flex;gap:6px;margin-top:6px"><input id="f_code" placeholder="바코드 숫자 직접 입력" style="flex:1"><button class="btn" id="f_addCode">추가</button></div></div>
+<div class="field"><label>메모</label><textarea id="f_memo" rows="2">${esc(it.memo)}</textarea></div>
+<button class="btn big primary" style="margin-top:14px" id="fSave">${isNew ? '등록' : '저장'}</button>`);
+const codes = (it.barcodes||[]).slice();
+const rc = () => { $('#f_codes').innerHTML = codes.length ? codes.map((c, i) => `<span class="codechip">${esc(c)}<button data-i="${i}">×</button></span>`).join('') : '<span class="hint">없음 — 스캔 화면에서 찍으면 연결할 수 있습니다.</span>'; $('#f_codes').querySelectorAll('button').forEach(b => b.onclick = () => { codes.splice(+b.dataset.i, 1); rc(); }); };
+rc();
+$('#f_addCode').onclick = () => { const v = normCode($('#f_code').value); if (v && !codes.includes(v)) codes.push(v); $('#f_code').value = ''; rc(); };
+$('#fX').onclick = closeModal;
+$('#fSave').onclick = async () => {
+const o = {id: isNew ? '' : it.id, barcodes: codes};
+['book', 'name', 'unit', 'min', 'location', 'owner', 'vendor', 'price', 'expiry', 'cycle', 'memo'].forEach(k => o[k] = $('#f_' + k).value.trim());
+if (isNew) o.stock = Number($('#f_stock').value) || 0;
+if (o.min !== '') o.min = Number(o.min);
+if (!o.name) return toast('품목명을 입력해 주세요.', 1);
+if (!S.user) await askName();
+$('#fSave').disabled = true; $('#fSave').textContent = '저장 중…';
+try {
+const r = await call('api_saveItem', o, S.user);
+upsertItems([r.item]); closeModal(); toast(isNew ? '등록했습니다.' : '저장했습니다.'); refreshLogs();
+S.pendingCode = null;
+if (isNew && preset && preset.barcodes) { S.gs1Expiry = ''; selectItem(r.item); }
+renderStock();
+} catch(e){ toast(e.message, 1); $('#fSave').disabled = false; $('#fSave').textContent = isNew ? '등록' : '저장'; }
+};
+}
+$('#addItemBtn').onclick = () => itemForm(null);
+/* ============ QR 라벨 ============ */
+function labelMaker(preIds){
+const sel = new Set(preIds || []);
+openModal(`<button class="x" id="lX">×</button><h3>QR 라벨</h3>
+<p class="hint">제조사 바코드가 없는 물품(소분 거즈, 자체 포장품 등)에 붙일 라벨입니다. 라벨을 찍으면 해당 품목이 바로 선택됩니다.</p>
+<div class="chips" id="lChips">${['전체 선택', ...BOOK_LIST, '선택 해제'].map(b => `<button data-b="${b}">${b}</button>`).join('')}</div>
+<div class="checkgrid">${S.items.slice().sort(cmpItem).map(it => `<label><input type="checkbox" value="${it.id}" ${sel.has(it.id) ? 'checked' : ''}> ${esc(it.name)} <span class="tag book">${esc(it.book)}</span></label>`).join('')}</div>
+<button class="btn big primary" style="margin-top:12px" id="lGo">라벨 만들기</button>
+<div id="printArea"><div id="labels"></div></div>
+<button class="btn big" style="margin-top:10px;display:none" id="lPrint">인쇄</button>`);
+$('#lX').onclick = closeModal;
+const boxes = () => [...document.querySelectorAll('.checkgrid input')];
+$('#lChips').querySelectorAll('button').forEach(b => b.onclick = () => {
+const k = b.dataset.b;
+boxes().forEach(x => { const it = S.items.find(i => i.id === x.value); x.checked = k === '전체 선택' ? true : k === '선택 해제' ? false : (x.checked || it.book === k); });
+});
+const make = () => {
+const ids = boxes().filter(x => x.checked).map(x => x.value);
+if (!ids.length) return toast('품목을 선택해 주세요.', 1);
+if (typeof QRCode === 'undefined') return toast('QR 기능을 불러오지 못했습니다.', 1);
+const box = $('#labels'); box.innerHTML = '';
+ids.forEach(id => {
+const it = S.items.find(i => i.id === id);
+const d = document.createElement('div'); d.className = 'label';
+d.innerHTML = `<div class="q"></div><b>${esc(it.name)}</b><span>${esc(it.id)} · ${esc(it.book)}</span>`;
+box.appendChild(d);
+new QRCode(d.querySelector('.q'), {text: 'ROMIMO:' + it.id, width: 176, height: 176, correctLevel: QRCode.CorrectLevel.M});
+});
+$('#lPrint').style.display = '';
+box.scrollIntoView({behavior: 'smooth'});
+};
+$('#lGo').onclick = make;
+$('#lPrint').onclick = () => { try { window.print(); } catch(e){ toast('이 화면에서는 인쇄가 막혀 있습니다. PC에서 Ctrl+P로 인쇄해 주세요.', 1); } };
+if (preIds && preIds.length) make();
+}
+$('#labelBtn').onclick = () => labelMaker();
+/* ============ 기록 화면 ============ */
+function logRow(l){
+const t = String(l.type);
+const cls = t.startsWith('취소') ? '취소' : t === '신규등록' ? '신규' : t;
+const label = t.startsWith('취소') ? '취소' : t === '신규등록' ? '신규' : t;
+const canCancel = !l.cancelled && !t.startsWith('취소') && t !== '신규등록' && l.user === S.user && String(l.time).slice(0,10) === (S.today || '') ;
+const d = Number(l.delta);
+return `<div class="logrow ${l.cancelled ? 'cancelled' : ''}" ${canCancel ? `data-no="${esc(l.no)}" style="cursor:pointer"` : ''}>
+<span class="badge b-${cls}">${label}</span>
+<div class="nm"><b>${esc(l.name)}</b><span>${esc(String(l.time).slice(5,16))} · ${esc(l.user)}${l.note ? ' · ' + esc(l.note) : ''}${l.expiry ? ' · 기한 ' + esc(l.expiry) : ''}${l.cancelled ? ' · 취소됨' : ''}</span></div>
+<div class="v">${t === '실사' ? '실제 ' + fmt(l.qty) : (d > 0 ? '+' : '') + fmt(d)}<span>→ ${fmt(l.after)}</span></div></div>`;
+}
+function renderLogs(){
+const chips = ['전체', ...BOOK_LIST];
+$('#logChips').innerHTML = chips.map(c => `<button class="${S.logBook === c ? 'on' : ''}" data-b="${c}">${c}</button>`).join('');
+$('#logChips').querySelectorAll('button').forEach(b => b.onclick = () => { S.logBook = b.dataset.b; renderLogs(); });
+let list = S.logs;
+if (S.logBook !== '전체') list = list.filter(l => l.book === S.logBook);
+$('#logList').innerHTML = list.length ? list.map(logRow).join('') : '<div class="empty">아직 기록이 없습니다.</div>';
+$('#logList').querySelectorAll('[data-no]').forEach(r => r.onclick = () => cancelLog(r.dataset.no));
+}
+async function cancelLog(no){
+const l = S.logs.find(x => x.no === no); if (!l) return;
+if (!await confirmBox(`<b>${esc(l.name)}</b> ${esc(l.type)} ${fmt(l.qty)} 기록을 취소할까요?<br>재고가 원래대로 돌아갑니다.`, '기록 취소')) return;
+try {
+const r = await call('api_cancel', no, S.user);
+upsertItems([r.item]); toast('취소했습니다.');
+await refreshLogs();
+} catch(e){ toast(e.message, 1); }
+}
+async function refreshLogs(){
+try { S.logs = await call('api_logs', {limit: 150}); renderLogs(); } catch(e){ toast(e.message, 1); }
+}
+/* ============ 보고 화면 ============ */
+async function loadReport(){
+const ym = $('#ym').value; if (!ym) return;
+$('#repTable').innerHTML = '<div class="empty">계산 중…</div>';
+try { S.report = await call('api_monthReport', ym); renderReport(); }
+catch(e){ $('#repTable').innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+function renderReport(){
+const rep = S.report || [];
+const low = S.items.filter(isLow), exp = S.items.filter(i => expState(i)).sort((a,b) => daysLeft(a.expiry) - daysLeft(b.expiry));
+const used = rep.filter(r => r.use > 0).length;
+$('#repStats').innerHTML = `<div class="stat"><b>${used}</b><span>이번 달 사용 품목</span></div><div class="stat red"><b>${low.length}</b><span>발주 필요</span></div><div class="stat org"><b>${exp.length}</b><span>유통기한 임박</span></div>`;
+let al = '';
+if (low.length) al += `<div class="card"><b style="color:var(--bad)">발주 필요 (최소재고 이하)</b><div style="margin-top:6px;line-height:1.8">${low.map(i => `${esc(i.name)} <span class="hint">${fmt(i.stock)}/${fmt(i.min)}${esc(i.unit)}</span>`).join(' · ')}</div></div>`;
+if (exp.length) al += `<div class="card"><b style="color:var(--warn)">유통기한 ${S.settings.expiryDays}일 이내</b><div style="margin-top:6px;line-height:1.8">${exp.map(i => `${esc(i.name)} <span class="hint">${esc(i.expiry)}</span>`).join(' · ')}</div></div>`;
+$('#alerts').innerHTML = al;
+const chips = ['전체', ...BOOK_LIST];
+$('#repChips').innerHTML = chips.map(c => `<button class="${S.repBook === c ? 'on' : ''}" data-b="${c}">${c}</button>`).join('');
+$('#repChips').querySelectorAll('button').forEach(b => b.onclick = () => { S.repBook = b.dataset.b; renderReport(); });
+let rows = rep.slice().sort(cmpItem); if (S.repBook !== '전체') rows = rows.filter(r => r.book === S.repBook);
+const z = v => v ? fmt(v) : '<span style="color:#cbd5e1">0</span>';
+$('#repTable').innerHTML = rows.length ? `<table class="rep"><thead><tr><th>품목</th><th>전월</th><th>입고</th><th>사용</th><th>파손</th><th>조정</th><th>월말</th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r.name)}</td><td>${fmt(r.start)}</td><td>${z(r.in)}</td><td><b>${z(r.use)}</b></td><td>${z(r.broken)}</td><td>${z(r.adjust)}</td><td><b>${fmt(r.end)}</b></td></tr>`).join('')}</tbody></table>` : '<div class="empty">조회 버튼을 눌러 주세요.</div>';
+}
+$('#repLoad').onclick = loadReport;
+$('#repSheet').onclick = async () => {
+const ym = $('#ym').value;
+$('#repSheet').disabled = true;
+try { const r = await call('api_makeReportSheet', ym); toast(`구글시트에 "${r.name}" 시트를 만들었습니다.`); }
+catch(e){ toast(e.message, 1); }
+$('#repSheet').disabled = false;
+};
+/* ============ 화면 전환 ============ */
+function goView(v){
+document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === 'v-' + v));
+document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+if (v !== 'scan') stopCam();
+if (v === 'stock'){ renderStock(); refreshAll(); }
+if (v === 'log'){ renderLogs(); refreshLogs(); }
+if (v === 'report'){ renderReport(); if (!S.report) loadReport(); }
+}
+document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => { goView(b.dataset.v); window.scrollTo(0, 0); });
+/* 다른 직원이 바꾼 재고를 반영 (20초에 한 번까지) */
+let lastRefresh = 0;
+async function refreshAll(){
+if (Date.now() - lastRefresh < 20000) return;
+lastRefresh = Date.now();
+try {
+const d = await call('api_bootstrap');
+S.items = d.items; S.logs = d.logs; S.today = d.today; renderCount();
+if ($('#v-stock').classList.contains('on')) renderStock();
+} catch(e){}
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshAll(); });
+/* ============ 시작 ============ */
+async function boot(){
+try {
+const d = await call('api_bootstrap');
+S.items = d.items; S.logs = d.logs; S.settings = d.settings; S.today = d.today; lastRefresh = Date.now();
+$('#ym').value = d.today.slice(0, 7);
+$('#loading').style.display = 'none';
+renderCount();
+if (S.user) $('#whoBtn').textContent = S.user; else askName();
+} catch(e){
+$('#loadingMsg').innerHTML = `불러오지 못했습니다.<br><small>${esc(e.message)}</small><br><br><button class="btn primary" onclick="location.reload()">다시 시도</button>`;
+$('.spin').style.display = 'none';
+}
+}
+boot();
+if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); }); }
+</script>
+</body>
+</html>
