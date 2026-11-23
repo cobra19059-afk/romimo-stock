@@ -140,8 +140,12 @@ table.rep td:first-child,table.rep th:first-child{text-align:left;white-space:no
 body *{visibility:hidden}
 #printArea,#printArea *{visibility:visible}
 #printArea{position:absolute;left:0;top:0;width:100%}
-#labels{grid-template-columns:repeat(4,1fr)}
-.label{border:1px dashed #999}
+@page{size:A4;margin:10mm}
+#labels{grid-template-columns:repeat(3,56mm);column-gap:11mm;row-gap:9mm;margin:0}
+.label{border:0.25mm solid #bbb;border-radius:2mm;height:25mm;display:flex;align-items:center;gap:3mm;padding:0 3mm;text-align:left;box-sizing:border-box}
+.label .q img,.label .q canvas{width:15mm!important;height:15mm!important}
+.label b{font-size:11pt;margin-top:0}
+.label span{font-size:7pt}
 }
 </style>
 </head>
